@@ -193,3 +193,37 @@ function handleLogout() {
     }
   });
 }
+
+/**
+ * FUNGSI UNTUK MENGISI DATA USER & MENU KE DASHBOARD
+ */
+function initializeDashboard() {
+  const user = window.userData;
+  if (!user || !user.username) return;
+
+  // 1. Isi Nama dan Role di Header
+  const nameElem = document.getElementById('user-display-name');
+  const roleElem = document.getElementById('user-role');
+  if (nameElem) nameElem.innerText = user.nama || user.username;
+  if (roleElem) roleElem.innerText = user.role || "Operator";
+
+  // 2. Isi Sidebar Menu
+  const menuContainer = document.getElementById('sidebar-menu');
+  if (menuContainer && user.menus) {
+    menuContainer.innerHTML = ''; // Bersihkan menu lama
+    
+    user.menus.forEach(menu => {
+      const btn = document.createElement('button');
+      btn.className = "w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-md transition-all group";
+      
+      // Berikan icon sederhana (lingkaran)
+      btn.innerHTML = `
+        <div class="w-1.5 h-1.5 rounded-full bg-zinc-600 group-hover:bg-amber-500"></div>
+        <span>${menu.name}</span>
+      `;
+      
+      btn.onclick = () => navigateTo(menu.pageId, menu.lane || "");
+      menuContainer.appendChild(btn);
+    });
+  }
+}
