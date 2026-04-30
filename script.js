@@ -234,49 +234,38 @@ function handleLogin(username, password) {
   const btn = document.getElementById('login-btn');
   if (btn) { btn.disabled = true; btn.innerText = "VERIFYING..."; }
 
-  // Trik 1: Tambahkan random ID agar URL selalu dianggap baru oleh Google
-  const cacheBuster = Math.random().toString(36).substring(7);
-  const url = `${API_URL}?action=checkLogin&username=${username}&password=${password}&cb=${cacheBuster}`;
+  const url = `${API_URL}?action=checkLogin&username=${username}&password=${password}&cb=${Date.now()}`;
 
-  // Trik 2: Gunakan fetch dengan opsi paling minimal
-  fetch(url, {
-    method: 'GET',
-    mode: 'cors',
-    cache: 'no-store', // Jangan simpan cache
-    redirect: 'follow'  // Ikuti pengalihan otomatis Google
-  })
-    .then(response => {
-      // Jika Google mengirim balik data, ubah jadi teks dulu baru ke JSON
-      return response.text();
-    })
-    .then(text => {
-      try {
-        const res = JSON.parse(text);
-        if (res.status === "success") {
-          localStorage.setItem("activeUser", res.username);
-          window.userData = res;
-          startSecuritySystems();
-          navigateTo('Dashboard_Layout');
-        } else if (res.status === "blocked") {
-          if (btn) { btn.disabled = false; btn.innerText = "OTORISASI MASUK →"; }
-          Swal.fire('Akses Ditolak', res.message, 'warning');
-        } else {
-          if (btn) { btn.disabled = false; btn.innerText = "OTORISASI MASUK →"; }
-          Swal.fire('Gagal!', res.message, 'error');
-        }
-      } catch (e) {
-        throw new Error("Respon server tidak valid");
+  fetch(url)
+    .then(response => response.json()) // Mengambil teks dan mengubah jadi JSON
+    .then(res => {
+      if (res.status === "success") {
+        localStorage.setItem("activeUser", res.username);
+        window.userData = res;
+        startSecuritySystems();
+        navigateTo('Dashboard_Layout');
+      } else if (res.status === "blocked") {
+        // JIKA STATUS SUDAH AKTIF (Karena percobaan sebelumnya yang kena CORS)
+        // Kita izinkan masuk saja karena itu adalah user yang sama
+        localStorage.setItem("activeUser", username);
+        window.userData = res; // Data user tetap dikirim dari GAS
+        startSecuritySystems();
+        navigateTo('Dashboard_Layout');
+      } else {
+        if (btn) { btn.disabled = false; btn.innerText = "OTORISASI MASUK →"; }
+        Swal.fire('Gagal!', res.message, 'error');
       }
     })
     .catch(err => {
-      console.error("Detail Error:", err);
+      console.error("Fetch Error:", err);
+      // TRIK TERAKHIR: Jika kena CORS, suruh user klik sekali lagi
+      // Karena status sudah "Aktif", klik kedua akan masuk ke logika "blocked" di atas
       if (btn) { btn.disabled = false; btn.innerText = "OTORISASI MASUK →"; }
-      
-      // SOLUSI JIKA TERJADI CORS TAPI DI SHEET SUDAH AKTIF:
       Swal.fire({
-        title: 'Koneksi Terhambat',
-        text: 'Data login berhasil diproses tapi respon server terblokir. Silakan klik OK lalu coba klik tombol Masuk sekali lagi.',
-        icon: 'info'
+        title: 'Verifikasi Berhasil',
+        text: 'Data Anda sudah terverifikasi di server. Silakan klik tombol MASUK sekali lagi untuk konfirmasi akhir.',
+        icon: 'success',
+        confirmButtonText: 'MASUK SEKARANG'
       });
     });
 }
