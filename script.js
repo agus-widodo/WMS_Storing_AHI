@@ -6,7 +6,7 @@ const sessionChannel = new BroadcastChannel('wms_strict_monitor');
 const TAB_ID = Math.random().toString(36).substring(7).toUpperCase();
 
 // !!! GANTI INI DENGAN URL WEB APP APPS SCRIPT ANDA !!!
-const API_URL = "https://script.google.com/macros/s/AKfycbyGkdTE3PpeAwXnet9sDaZMbhARBeyVr2zoZ01jKkCH1E6vG16imTIXwQoH-5Plz-OY-w/exec"; 
+const API_URL = "https://script.google.com/macros/s/AKfycbwPHhi3EshYOuHkPl2-gSd7v4zIMa6Jm4Ja1B2fcPHq6TuuG1TkrWo3kFbllJ6xw5yHyQ/exec"; 
 
 // Helper untuk ambil user dari storage
 const getActiveUser = () => localStorage.getItem('activeUser');
