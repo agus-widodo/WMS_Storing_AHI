@@ -232,45 +232,50 @@ function startHeartbeat() {
  */
 function handleLogin(username, password) {
   const btn = document.getElementById('login-btn');
-  if (btn) { 
-    btn.disabled = true; 
-    btn.innerText = "VERIFYING..."; 
-  }
+  if (btn) { btn.disabled = true; btn.innerText = "VERIFYING..."; }
 
-  // Gunakan URL sederhana tanpa tambahan header yang rumit
-  const url = `${API_URL}?action=checkLogin&username=${username}&password=${password}`;
+  // Trik 1: Tambahkan random ID agar URL selalu dianggap baru oleh Google
+  const cacheBuster = Math.random().toString(36).substring(7);
+  const url = `${API_URL}?action=checkLogin&username=${username}&password=${password}&cb=${cacheBuster}`;
 
-  fetch(url)
+  // Trik 2: Gunakan fetch dengan opsi paling minimal
+  fetch(url, {
+    method: 'GET',
+    mode: 'cors',
+    cache: 'no-store', // Jangan simpan cache
+    redirect: 'follow'  // Ikuti pengalihan otomatis Google
+  })
     .then(response => {
-      // Google akan memberikan status 200 OK jika redirect berhasil
-      return response.json();
+      // Jika Google mengirim balik data, ubah jadi teks dulu baru ke JSON
+      return response.text();
     })
-    .then(res => {
-      if (res.status === "success") {
-        localStorage.setItem("activeUser", res.username);
-        window.userData = res;
-        startSecuritySystems();
-        navigateTo('Dashboard_Layout');
-      } else if (res.status === "blocked") {
-        if (btn) { btn.disabled = false; btn.innerText = "OTORISASI MASUK →"; }
-        Swal.fire('Akses Ditolak', res.message, 'warning');
-      } else {
-        if (btn) { btn.disabled = false; btn.innerText = "OTORISASI MASUK →"; }
-        Swal.fire('Gagal!', res.message, 'error');
+    .then(text => {
+      try {
+        const res = JSON.parse(text);
+        if (res.status === "success") {
+          localStorage.setItem("activeUser", res.username);
+          window.userData = res;
+          startSecuritySystems();
+          navigateTo('Dashboard_Layout');
+        } else if (res.status === "blocked") {
+          if (btn) { btn.disabled = false; btn.innerText = "OTORISASI MASUK →"; }
+          Swal.fire('Akses Ditolak', res.message, 'warning');
+        } else {
+          if (btn) { btn.disabled = false; btn.innerText = "OTORISASI MASUK →"; }
+          Swal.fire('Gagal!', res.message, 'error');
+        }
+      } catch (e) {
+        throw new Error("Respon server tidak valid");
       }
     })
     .catch(err => {
-      console.error("CORS/Fetch Error:", err);
-      
-      /**
-       * SOLUSI DARURAT: 
-       * Jika status di Sheet sudah "Aktif" tapi browser tetap error CORS,
-       * kita bisa melakukan pengecekan ulang atau memberikan jeda.
-       */
+      console.error("Detail Error:", err);
       if (btn) { btn.disabled = false; btn.innerText = "OTORISASI MASUK →"; }
+      
+      // SOLUSI JIKA TERJADI CORS TAPI DI SHEET SUDAH AKTIF:
       Swal.fire({
         title: 'Koneksi Terhambat',
-        text: 'Data berhasil diproses tapi respon server terblokir (CORS). Silakan coba klik Masuk sekali lagi.',
+        text: 'Data login berhasil diproses tapi respon server terblokir. Silakan klik OK lalu coba klik tombol Masuk sekali lagi.',
         icon: 'info'
       });
     });
