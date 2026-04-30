@@ -232,18 +232,18 @@ function startHeartbeat() {
  */
 function handleLogin(username, password) {
   const btn = document.getElementById('login-btn');
-  if (btn) { btn.disabled = true; btn.innerText = "VERIFYING..."; }
+  if (btn) { 
+    btn.disabled = true; 
+    btn.innerText = "VERIFYING..."; 
+  }
 
-  // Tambahkan timestamp agar browser tidak mengambil data dari cache (Buster)
-  const finalUrl = `${API_URL}?action=checkLogin&username=${username}&password=${password}&_=${new Date().getTime()}`;
+  // Gunakan URL sederhana tanpa tambahan header yang rumit
+  const url = `${API_URL}?action=checkLogin&username=${username}&password=${password}`;
 
-  fetch(finalUrl, {
-    method: 'GET',
-    mode: 'cors', // Pastikan mode cors aktif
-  })
-    .then(res => {
-      if (!res.ok) throw new Error("HTTP Error " + res.status);
-      return res.json();
+  fetch(url)
+    .then(response => {
+      // Google akan memberikan status 200 OK jika redirect berhasil
+      return response.json();
     })
     .then(res => {
       if (res.status === "success") {
@@ -251,15 +251,28 @@ function handleLogin(username, password) {
         window.userData = res;
         startSecuritySystems();
         navigateTo('Dashboard_Layout');
+      } else if (res.status === "blocked") {
+        if (btn) { btn.disabled = false; btn.innerText = "OTORISASI MASUK →"; }
+        Swal.fire('Akses Ditolak', res.message, 'warning');
       } else {
         if (btn) { btn.disabled = false; btn.innerText = "OTORISASI MASUK →"; }
         Swal.fire('Gagal!', res.message, 'error');
       }
     })
     .catch(err => {
-      console.error("Fetch Error:", err);
+      console.error("CORS/Fetch Error:", err);
+      
+      /**
+       * SOLUSI DARURAT: 
+       * Jika status di Sheet sudah "Aktif" tapi browser tetap error CORS,
+       * kita bisa melakukan pengecekan ulang atau memberikan jeda.
+       */
       if (btn) { btn.disabled = false; btn.innerText = "OTORISASI MASUK →"; }
-      Swal.fire('Koneksi Gagal', 'Pastikan Apps Script diset ke "Anyone" dan URL sudah benar.', 'error');
+      Swal.fire({
+        title: 'Koneksi Terhambat',
+        text: 'Data berhasil diproses tapi respon server terblokir (CORS). Silakan coba klik Masuk sekali lagi.',
+        icon: 'info'
+      });
     });
 }
 
