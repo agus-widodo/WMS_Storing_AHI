@@ -1,229 +1,108 @@
-/**
- * 1. GLOBAL SCOPE DEFINITIONS
- */
 window.userData = { username: null, nama: null, role: null, menus: [] };
-const sessionChannel = new BroadcastChannel('wms_strict_monitor');
-const TAB_ID = Math.random().toString(36).substring(7).toUpperCase();
 
-// !!! GANTI INI DENGAN URL WEB APP APPS SCRIPT ANDA !!!
-const API_URL = "https://script.google.com/macros/s/AKfycbwPHhi3EshYOuHkPl2-gSd7v4zIMa6Jm4Ja1B2fcPHq6TuuG1TkrWo3kFbllJ6xw5yHyQ/exec"; 
+const API_URL = "https://script.google.com/macros/s/AKfycbwPHhi3EshYOuHkPl2-gSd7v4zIMa6Jm4Ja1B2fcPHq6TuuG1TkrWo3kFbllJ6xw5yHyQ/exec"; // !!! WAJIB ISI !!!
 
-// Helper untuk ambil user dari storage
 const getActiveUser = () => localStorage.getItem('activeUser');
 
-/**
- * 2. ANTI-TAB GANDA (STRICT MODE)
- */
-async function validateTabSovereignty() {
-  const isRefresh = sessionStorage.getItem('tab_initialized');
-  
-  if (!isRefresh) {
-    console.log("Tab Baru [" + TAB_ID + "]: Mencari tab lain...");
-    
-    return new Promise((resolve) => {
-      let tabConflict = false;
-
-      const taster = (event) => {
-        if (event.data.type === 'PONG_ACTIVE') tabConflict = true;
-      };
-      sessionChannel.addEventListener('message', taster);
-      sessionChannel.postMessage({ type: 'PING_CHECK', id: TAB_ID });
-
-      setTimeout(() => {
-        sessionChannel.removeEventListener('message', taster);
-        if (tabConflict) {
-          blockDuplicateTab();
-        } else {
-          sessionStorage.setItem('tab_initialized', 'true');
-          resolve();
-        }
-      }, 500);
-    });
-  }
-  return Promise.resolve();
-}
-
-function blockDuplicateTab() {
-  document.body.innerHTML = `
-    <div class="min-h-screen flex items-center justify-center bg-slate-900 p-6 text-center select-none">
-      <div class="max-w-md bg-white p-10 rounded-[40px] shadow-2xl fade-in">
-        <div class="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
-          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
-        </div>
-        <h2 class="text-2xl font-black text-slate-800 mb-4">Akses Ditolak</h2>
-        <p class="text-slate-500 mb-8 leading-relaxed text-sm">Aplikasi sudah terbuka di tab lain. Sistem hanya mengizinkan satu tab aktif demi keamanan data.</p>
-        <button onclick="window.close()" class="w-full bg-slate-800 text-white font-bold py-4 rounded-2xl shadow-lg">TUTUP TAB INI</button>
-      </div>
-    </div>
-  `;
-  throw new Error("Duplicate Tab Blocked");
-}
-
-/**
- * 3. RESPONSE HANDLER
- */
-sessionChannel.onmessage = (event) => {
-  if (event.data.type === 'PING_CHECK' && event.data.id !== TAB_ID) {
-    sessionChannel.postMessage({ type: 'PONG_ACTIVE', id: TAB_ID });
-  }
-};
-
-/**
- * 4. INIT & REFRESH LOGIC
- */
-document.addEventListener('DOMContentLoaded', async function() {
-  await validateTabSovereignty();
-
-  const prevUser = getActiveUser();
-  if (prevUser) {
-    // Diganti menggunakan Fetch API
-    fetch(`${API_URL}?action=logoutUser&user=${prevUser}`);
-  }
-  
-  localStorage.clear();
-  window.userData = { username: null, nama: null, role: null, menus: [] };
-  navigateTo('Login');
-});
-
+// FUNGSI NAVIGASI
 function navigateTo(pageId, lane = "") {
   const container = document.getElementById('app-container');
   const user = getActiveUser();
 
-  // 1. LAPORKAN POSISI KE SERVER (Tetap ke Apps Script)
   if (user) {
-    const syncLane = (pageId === 'CCTransaksi' || pageId === 'Penurunan') ? lane : "";
-    // Pastikan parameter menggunakan 'username' sesuai di doGet Apps Script
-    fetch(`${API_URL}?action=syncUserActivity&username=${user}&pageId=${pageId}&lane=${syncLane}`);
+    fetch(`${API_URL}?action=syncUserActivity&username=${user}&pageId=${pageId}&lane=${lane}`);
   }
 
-  // 2. MUAT HALAMAN (Ambil dari folder /pages/ di GitHub)
-  // GANTI BARIS INI:
-  const pagePath = `./pages/${pageId}.html`;
-
-  fetch(pagePath)
-    .then(response => {
-      if (!response.ok) throw new Error('Halaman tidak ditemukan di folder pages');
-      return response.text();
-    })
+  fetch(`./pages/${pageId}.html`)
+    .then(res => { if(!res.ok) throw new Error(); return res.text(); })
     .then(html => {
       if (pageId === 'Login' || pageId === 'Dashboard_Layout') {
         container.innerHTML = html;
         executeScripts(container);
+        if (pageId === 'Dashboard_Layout') setTimeout(initializeDashboard, 200);
       } else {
-        const contentArea = document.getElementById('content-area');
-        if (contentArea) {
-          contentArea.innerHTML = html;
-          setTimeout(() => { executeScripts(contentArea); }, 100);
+        const area = document.getElementById('content-area');
+        if (area) { 
+            area.innerHTML = html; 
+            if(window.innerWidth < 768) toggleMobileMenu(); // Tutup menu jika di HP
+            document.getElementById('mobile-page-title').innerText = pageId;
+            setTimeout(() => executeScripts(area), 100); 
         }
       }
     })
-    .catch(error => {
-      console.error("Gagal memuat halaman:", error);
-      // Fallback jika gagal, coba ambil dari Apps Script (opsional)
+    .catch(() => navigateTo('Login'));
+}
+
+// ISI DATA DASHBOARD (DI SINI MASALAH INFO TIDAK MUNCUL)
+function initializeDashboard() {
+  const user = window.userData;
+  if (!user.username) {
+     // Jika data hilang (refresh), coba ambil dari storage (opsional) atau tendang ke login
+     return navigateTo('Login');
+  }
+
+  // Isi Nama di Desktop & Mobile
+  if(document.getElementById('user-display-name')) document.getElementById('user-display-name').innerText = user.nama;
+  if(document.getElementById('user-display-name-mobile')) document.getElementById('user-display-name-mobile').innerText = user.nama;
+  if(document.getElementById('user-role')) document.getElementById('user-role').innerText = user.role;
+
+  // Render Menu
+  const menuContainer = document.getElementById('sidebar-menu');
+  if (menuContainer && user.menus) {
+    menuContainer.innerHTML = '';
+    user.menus.forEach(m => {
+      const btn = document.createElement('button');
+      btn.className = "w-full flex items-center gap-3 px-4 py-4 md:py-3 text-sm font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-all";
+      btn.innerHTML = `<div class="w-1.5 h-1.5 rounded-full bg-amber-600"></div><span>${m.name}</span>`;
+      btn.onclick = () => navigateTo(m.pageId, m.lane || "");
+      menuContainer.appendChild(btn);
     });
+  }
+}
+
+// FUNGSI MOBILE MENU
+function toggleMobileMenu() {
+    const sidebar = document.getElementById('main-sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    if(sidebar.classList.contains('-translate-x-full')) {
+        sidebar.classList.remove('-translate-x-full');
+        overlay.classList.remove('hidden');
+    } else {
+        sidebar.classList.add('-translate-x-full');
+        overlay.classList.add('hidden');
+    }
 }
 
 function executeScripts(container) {
   const scripts = container.getElementsByTagName('script');
   for (let i = 0; i < scripts.length; i++) {
-    try {
-      const newScript = document.createElement('script');
-      newScript.text = scripts[i].text;
-      document.body.appendChild(newScript).parentNode.removeChild(newScript);
-    } catch (e) {
-      console.error("Script Error:", e);
-    }
+    const newScript = document.createElement('script');
+    newScript.text = scripts[i].text;
+    document.body.appendChild(newScript).parentNode.removeChild(newScript);
   }
 }
 
-/**
- * 6. AUTHENTICATION LOGIC
- */
 function handleLogin(username, password) {
   const btn = document.getElementById('login-btn');
-  if(btn) {
-    btn.disabled = true;
-    btn.innerHTML = `<span class="animate-spin mr-2 inline-block">⏳</span> Memverifikasi...`;
-  }
+  btn.disabled = true; btn.innerText = "VERIFYING...";
 
-  // Diganti menggunakan Fetch API
   fetch(`${API_URL}?action=checkLogin&username=${username}&password=${password}`)
-    .then(response => response.json())
+    .then(res => res.json())
     .then(res => {
       if (res.status === "success") {
         localStorage.setItem("activeUser", res.username);
-        window.userData = res;
-        sessionChannel.postMessage({ type: 'NEW_LOGIN', id: TAB_ID });
+        window.userData = res; // Simpan ke memori
         navigateTo('Dashboard_Layout');
       } else {
-        if(btn) {
-          btn.disabled = false;
-          btn.innerHTML = `Masuk Sekarang`;
-        }
+        btn.disabled = false; btn.innerText = "OTORISASI MASUK →";
         Swal.fire('Gagal!', res.message, 'error');
-      }
-    })
-    .catch(error => {
-      console.error("Error Login:", error);
-      if(btn) {
-        btn.disabled = false;
-        btn.innerHTML = `Masuk Sekarang`;
       }
     });
 }
 
 function handleLogout() {
-  const user = getActiveUser();
-  if (!user) return navigateTo('Login');
-
-  Swal.fire({
-    title: 'Keluar?',
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonText: 'Ya, Keluar'
-  }).then((result) => {
-    if (result.isConfirmed) {
-      // Diganti menggunakan Fetch API
-      fetch(`${API_URL}?action=logoutUser&user=${user}`)
-        .then(() => {
-          localStorage.clear();
-          window.userData = { username: null, nama: null, role: null, menus: [] };
-          navigateTo('Login');
-        });
-    }
-  });
+  localStorage.clear();
+  window.location.reload();
 }
 
-/**
- * FUNGSI UNTUK MENGISI DATA USER & MENU KE DASHBOARD
- */
-function initializeDashboard() {
-  const user = window.userData;
-  if (!user || !user.username) return;
-
-  // 1. Isi Nama dan Role di Header
-  const nameElem = document.getElementById('user-display-name');
-  const roleElem = document.getElementById('user-role');
-  if (nameElem) nameElem.innerText = user.nama || user.username;
-  if (roleElem) roleElem.innerText = user.role || "Operator";
-
-  // 2. Isi Sidebar Menu
-  const menuContainer = document.getElementById('sidebar-menu');
-  if (menuContainer && user.menus) {
-    menuContainer.innerHTML = ''; // Bersihkan menu lama
-    
-    user.menus.forEach(menu => {
-      const btn = document.createElement('button');
-      btn.className = "w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-md transition-all group";
-      
-      // Berikan icon sederhana (lingkaran)
-      btn.innerHTML = `
-        <div class="w-1.5 h-1.5 rounded-full bg-zinc-600 group-hover:bg-amber-500"></div>
-        <span>${menu.name}</span>
-      `;
-      
-      btn.onclick = () => navigateTo(menu.pageId, menu.lane || "");
-      menuContainer.appendChild(btn);
-    });
-  }
-}
+document.addEventListener('DOMContentLoaded', () => { navigateTo('Login'); });
