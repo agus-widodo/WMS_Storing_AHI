@@ -266,3 +266,16 @@ function handleLogout() {
     window.location.reload();
   });
 }
+
+/**
+ * 5. INISIALISASI AWAL (YANG MEMBUAT HALAMAN MUNCUL)
+ */
+document.addEventListener('DOMContentLoaded', () => {
+  const user = getActiveUser();
+  if (user) {
+    // Jika user refresh saat masih login, coba bersihkan sesi lama
+    fetch(`${API_URL}?action=logoutUser&username=${user}`);
+  }
+  localStorage.clear();
+  navigateTo('Login'); // Memanggil halaman login saat pertama buka
+});
