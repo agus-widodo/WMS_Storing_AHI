@@ -232,27 +232,34 @@ function startHeartbeat() {
  */
 function handleLogin(username, password) {
   const btn = document.getElementById('login-btn');
-  btn.disabled = true; btn.innerText = "VERIFYING...";
+  if (btn) { btn.disabled = true; btn.innerText = "VERIFYING..."; }
 
-  fetch(`${API_URL}?action=checkLogin&username=${username}&password=${password}`)
-    .then(res => res.json())
+  // Tambahkan timestamp agar browser tidak mengambil data dari cache (Buster)
+  const finalUrl = `${API_URL}?action=checkLogin&username=${username}&password=${password}&_=${new Date().getTime()}`;
+
+  fetch(finalUrl, {
+    method: 'GET',
+    mode: 'cors', // Pastikan mode cors aktif
+  })
+    .then(res => {
+      if (!res.ok) throw new Error("HTTP Error " + res.status);
+      return res.json();
+    })
     .then(res => {
       if (res.status === "success") {
         localStorage.setItem("activeUser", res.username);
         window.userData = res;
-        
-        // Mulai Monitoring setelah login sukses
-        startIdleMonitoring();
-        startHeartbeat();
-        
+        startSecuritySystems();
         navigateTo('Dashboard_Layout');
-      } else if (res.status === "blocked") {
-        btn.disabled = false; btn.innerText = "OTORISASI MASUK →";
-        Swal.fire('Akses Ditolak', res.message, 'warning');
       } else {
-        btn.disabled = false; btn.innerText = "OTORISASI MASUK →";
+        if (btn) { btn.disabled = false; btn.innerText = "OTORISASI MASUK →"; }
         Swal.fire('Gagal!', res.message, 'error');
       }
+    })
+    .catch(err => {
+      console.error("Fetch Error:", err);
+      if (btn) { btn.disabled = false; btn.innerText = "OTORISASI MASUK →"; }
+      Swal.fire('Koneksi Gagal', 'Pastikan Apps Script diset ke "Anyone" dan URL sudah benar.', 'error');
     });
 }
 
