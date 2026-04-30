@@ -1,0 +1,38 @@
+<div class="min-h-screen flex items-center justify-center p-4">
+  <div class="w-full max-w-md bg-white border border-zinc-200 shadow-xl overflow-hidden rounded-md">
+    <!-- Header Aksentuasi Oranye -->
+    <div class="h-2 bg-industrial"></div>
+    
+    <div class="p-8">
+      <div class="flex items-center gap-3 mb-8">
+        <div class="w-10 h-10 bg-dark text-white flex items-center justify-center rounded">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight text-zinc-900">WMS<span class="text-industrial">PRO</span></h1>
+          <p class="text-xs text-zinc-500 font-medium uppercase tracking-widest">Industrial Management</p>
+        </div>
+      </div>
+
+      <form onsubmit="event.preventDefault(); handleLogin(this.username.value, this.password.value);" class="space-y-5">
+        <div>
+          <label class="block text-xs font-bold uppercase text-zinc-500 mb-1.5">User Terminal ID</label>
+          <input type="text" name="username" class="input-industrial font-data" placeholder="Masukkan ID..." required>
+        </div>
+        <div>
+          <label class="block text-xs font-bold uppercase text-zinc-500 mb-1.5">Security Access Key</label>
+          <input type="password" name="password" class="input-industrial" placeholder="••••••••" required>
+        </div>
+        
+        <button type="submit" id="login-btn" class="w-full btn-industrial py-4 mt-2 flex items-center justify-center gap-2">
+          <span>Otorisasi Akses</span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </button>
+      </form>
+    </div>
+    
+    <div class="bg-zinc-50 border-t border-zinc-100 p-4 text-center">
+      <p class="text-[10px] text-zinc-400 font-mono uppercase">System Node: AHI-WH-MAIN-01</p>
+    </div>
+  </div>
+</div>
