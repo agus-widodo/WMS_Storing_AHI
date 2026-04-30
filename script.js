@@ -184,46 +184,6 @@ function executeScripts(container) {
   }
 }
 
-/**
- * 3. UPDATE HANDLE LOGIN (Cek Status Blocked)
- */
-function handleLogin(username, password) {
-  const btn = document.getElementById('login-btn');
-  btn.disabled = true; btn.innerText = "VERIFYING...";
-
-  fetch(`${API_URL}?action=checkLogin&username=${username}&password=${password}`)
-    .then(res => res.json())
-    .then(res => {
-      if (res.status === "success") {
-        localStorage.setItem("activeUser", res.username);
-        window.userData = res;
-        
-        // Mulai Monitoring setelah login sukses
-        startIdleMonitoring();
-        startHeartbeat();
-        
-        navigateTo('Dashboard_Layout');
-      } else if (res.status === "blocked") {
-        btn.disabled = false; btn.innerText = "OTORISASI MASUK →";
-        Swal.fire('Akses Ditolak', res.message, 'warning');
-      } else {
-        btn.disabled = false; btn.innerText = "OTORISASI MASUK →";
-        Swal.fire('Gagal!', res.message, 'error');
-      }
-    });
-}
-
-function handleLogout() {
-  const user = getActiveUser();
-  clearInterval(heartbeatTimer);
-  clearTimeout(idleTimer);
-  
-  fetch(`${API_URL}?action=logoutUser&username=${user}`).finally(() => {
-    localStorage.clear();
-    window.location.reload();
-  });
-}
-
 let idleTimer;
 let heartbeatTimer;
 const IDLE_LIMIT = 10 * 60 * 1000; // 10 Menit dalam Milidetik
@@ -265,4 +225,44 @@ function startHeartbeat() {
       fetch(`${API_URL}?action=syncUserActivity&username=${user}&pageId=StayAlive&lane=Heartbeat`);
     }
   }, HEARTBEAT_INTERVAL);
+}
+
+/**
+ * 3. UPDATE HANDLE LOGIN (Cek Status Blocked)
+ */
+function handleLogin(username, password) {
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true; btn.innerText = "VERIFYING...";
+
+  fetch(`${API_URL}?action=checkLogin&username=${username}&password=${password}`)
+    .then(res => res.json())
+    .then(res => {
+      if (res.status === "success") {
+        localStorage.setItem("activeUser", res.username);
+        window.userData = res;
+        
+        // Mulai Monitoring setelah login sukses
+        startIdleMonitoring();
+        startHeartbeat();
+        
+        navigateTo('Dashboard_Layout');
+      } else if (res.status === "blocked") {
+        btn.disabled = false; btn.innerText = "OTORISASI MASUK →";
+        Swal.fire('Akses Ditolak', res.message, 'warning');
+      } else {
+        btn.disabled = false; btn.innerText = "OTORISASI MASUK →";
+        Swal.fire('Gagal!', res.message, 'error');
+      }
+    });
+}
+
+function handleLogout() {
+  const user = getActiveUser();
+  clearInterval(heartbeatTimer);
+  clearTimeout(idleTimer);
+  
+  fetch(`${API_URL}?action=logoutUser&username=${user}`).finally(() => {
+    localStorage.clear();
+    window.location.reload();
+  });
 }
