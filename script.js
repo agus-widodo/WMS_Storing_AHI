@@ -85,23 +85,26 @@ document.addEventListener('DOMContentLoaded', async function() {
   navigateTo('Login');
 });
 
-/**
- * 5. MESIN NAVIGASI UTAMA
- */
 function navigateTo(pageId, lane = "") {
   const container = document.getElementById('app-container');
   const user = getActiveUser();
 
-  // 1. LAPORKAN POSISI KE SERVER
+  // 1. LAPORKAN POSISI KE SERVER (Tetap ke Apps Script)
   if (user) {
     const syncLane = (pageId === 'CCTransaksi' || pageId === 'Penurunan') ? lane : "";
-    // Diganti menggunakan Fetch API
-    fetch(`${API_URL}?action=syncUserActivity&user=${user}&pageId=${pageId}&lane=${syncLane}`);
+    // Pastikan parameter menggunakan 'username' sesuai di doGet Apps Script
+    fetch(`${API_URL}?action=syncUserActivity&username=${user}&pageId=${pageId}&lane=${syncLane}`);
   }
 
-  // 2. MUAT HALAMAN (Mengambil HTML dari Apps Script)
-  fetch(`${API_URL}?action=loadPage&pageId=${pageId}`)
-    .then(response => response.text())
+  // 2. MUAT HALAMAN (Ambil dari folder /pages/ di GitHub)
+  // GANTI BARIS INI:
+  const pagePath = `./pages/${pageId}.html`;
+
+  fetch(pagePath)
+    .then(response => {
+      if (!response.ok) throw new Error('Halaman tidak ditemukan di folder pages');
+      return response.text();
+    })
     .then(html => {
       if (pageId === 'Login' || pageId === 'Dashboard_Layout') {
         container.innerHTML = html;
@@ -114,7 +117,10 @@ function navigateTo(pageId, lane = "") {
         }
       }
     })
-    .catch(error => console.error("Gagal memuat halaman:", error));
+    .catch(error => {
+      console.error("Gagal memuat halaman:", error);
+      // Fallback jika gagal, coba ambil dari Apps Script (opsional)
+    });
 }
 
 function executeScripts(container) {
