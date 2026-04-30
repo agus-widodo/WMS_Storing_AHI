@@ -35,42 +35,109 @@ function navigateTo(pageId, lane = "") {
 
 function initializeDashboard() {
   const user = window.userData;
-  if (!user || !user.username) return;
-
-  // Isi Info User di Header
-  document.getElementById('user-display-name').innerText = user.nama;
-  document.getElementById('user-role').innerText = user.role;
+  if (!user || !user.menus) return;
 
   const menuContainer = document.getElementById('sidebar-menu');
   if (!menuContainer) return;
   menuContainer.innerHTML = '';
 
-  // PROSES MENU: Kelompokkan berdasarkan Parent
   const menus = user.menus;
+
+  // 1. Identifikasi Root Items (Items yang Parent-nya kosong "")
+  const rootItems = menus.filter(m => m.parent === "");
+
+  rootItems.forEach(item => {
+    // Cek apakah item ini punya anak?
+    const children = menus.filter(m => m.parent === item.name);
+
+    if (children.length > 0) {
+      // JIKA PUNYA ANAK: Render sebagai Accordion (Collapse/Expand)
+      menuContainer.appendChild(createCollapsibleMenu(item, children));
+    } else {
+      // JIKA TIDAK PUNYA ANAK: Render sebagai Tombol Biasa
+      menuContainer.appendChild(createSimpleMenu(item));
+    }
+  });
+}
+
+// Tombol Menu Biasa (Tanpa Submenu)
+function createSimpleMenu(item) {
+  const btn = document.createElement('button');
+  btn.className = "w-full flex items-center justify-between px-4 py-3 text-[11px] font-black text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-all group uppercase tracking-widest";
   
-  // Ambil daftar Parent yang unik (yang tidak kosong)
-  const categories = [...new Set(menus.map(m => m.parent).filter(p => p !== ""))];
+  btn.innerHTML = `
+    <div class="flex items-center gap-3">
+      <span class="text-base">${item.icon || '•'}</span>
+      <span>${item.name}</span>
+    </div>
+  `;
+  
+  btn.onclick = () => {
+    setActiveMenu(btn);
+    navigateTo(item.pageId);
+  };
+  return btn;
+}
 
-  // 1. Render Menu Tanpa Parent (seperti Beranda/Dashboard)
-  const topLevel = menus.filter(m => m.parent === "");
-  topLevel.forEach(m => {
-    menuContainer.appendChild(createMenuButton(m, false));
+// Tombol Menu Accordion (Dengan Submenu)
+function createCollapsibleMenu(parentItem, children) {
+  const container = document.createElement('div');
+  container.className = "w-full mb-1";
+
+  // Header Parent
+  const header = document.createElement('button');
+  header.className = "w-full flex items-center justify-between px-4 py-3 text-[11px] font-black text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-all group uppercase tracking-widest";
+  
+  header.innerHTML = `
+    <div class="flex items-center gap-3">
+      <span class="text-base">${parentItem.icon || '📁'}</span>
+      <span>${parentItem.name}</span>
+    </div>
+    <svg class="chevron-icon w-4 h-4 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path>
+    </svg>
+  `;
+
+  // Container Submenu
+  const subContainer = document.createElement('div');
+  subContainer.className = "menu-group-content";
+
+  children.forEach(child => {
+    const subBtn = document.createElement('button');
+    subBtn.className = "w-full text-left px-4 py-2.5 text-[10px] font-bold text-zinc-500 hover:text-white hover:bg-zinc-800/50 transition-all uppercase tracking-widest submenu-item";
+    subBtn.innerText = child.name;
+    subBtn.onclick = () => {
+      setActiveMenu(subBtn);
+      navigateTo(child.pageId);
+    };
+    subContainer.appendChild(subBtn);
   });
 
-  // 2. Render Menu Berdasarkan Group (Parent)
-  categories.forEach(cat => {
-    // Buat Header Kategori (Folder)
-    const header = document.createElement('div');
-    header.className = "text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] px-4 mt-6 mb-2";
-    header.innerText = cat;
-    menuContainer.appendChild(header);
+  // Logika Klik untuk Expand/Collapse
+  header.onclick = () => {
+    const isOpen = subContainer.classList.contains('open');
+    
+    // Tutup semua menu lain yang sedang terbuka (Optional: Accordion Mode)
+    document.querySelectorAll('.menu-group-content').forEach(el => el.classList.remove('open'));
+    document.querySelectorAll('.chevron-icon').forEach(el => el.classList.remove('chevron-rotate'));
 
-    // Ambil semua menu yang masuk dalam parent ini
-    const subMenus = menus.filter(m => m.parent === cat);
-    subMenus.forEach(sm => {
-      menuContainer.appendChild(createMenuButton(sm, true));
-    });
+    if (!isOpen) {
+      subContainer.classList.add('open');
+      header.querySelector('.chevron-icon').classList.add('chevron-rotate');
+    }
+  };
+
+  container.appendChild(header);
+  container.appendChild(subContainer);
+  return container;
+}
+
+// Helper untuk menandai menu yang sedang aktif
+function setActiveMenu(element) {
+  document.querySelectorAll('#sidebar-menu button').forEach(b => {
+    b.classList.remove('text-amber-500', 'bg-zinc-800', 'border-l-4', 'border-amber-600');
   });
+  element.classList.add('text-amber-500', 'bg-zinc-800');
 }
 
 // Fungsi Helper untuk Membuat Tombol Menu
