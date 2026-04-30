@@ -33,31 +33,72 @@ function navigateTo(pageId, lane = "") {
     .catch(() => navigateTo('Login'));
 }
 
-// ISI DATA DASHBOARD (DI SINI MASALAH INFO TIDAK MUNCUL)
 function initializeDashboard() {
   const user = window.userData;
-  if (!user.username) {
-     // Jika data hilang (refresh), coba ambil dari storage (opsional) atau tendang ke login
-     return navigateTo('Login');
-  }
+  if (!user || !user.username) return;
 
-  // Isi Nama di Desktop & Mobile
-  if(document.getElementById('user-display-name')) document.getElementById('user-display-name').innerText = user.nama;
-  if(document.getElementById('user-display-name-mobile')) document.getElementById('user-display-name-mobile').innerText = user.nama;
-  if(document.getElementById('user-role')) document.getElementById('user-role').innerText = user.role;
+  // Isi Info User di Header
+  document.getElementById('user-display-name').innerText = user.nama;
+  document.getElementById('user-role').innerText = user.role;
 
-  // Render Menu
   const menuContainer = document.getElementById('sidebar-menu');
-  if (menuContainer && user.menus) {
-    menuContainer.innerHTML = '';
-    user.menus.forEach(m => {
-      const btn = document.createElement('button');
-      btn.className = "w-full flex items-center gap-3 px-4 py-4 md:py-3 text-sm font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-all";
-      btn.innerHTML = `<div class="w-1.5 h-1.5 rounded-full bg-amber-600"></div><span>${m.name}</span>`;
-      btn.onclick = () => navigateTo(m.pageId, m.lane || "");
-      menuContainer.appendChild(btn);
+  if (!menuContainer) return;
+  menuContainer.innerHTML = '';
+
+  // PROSES MENU: Kelompokkan berdasarkan Parent
+  const menus = user.menus;
+  
+  // Ambil daftar Parent yang unik (yang tidak kosong)
+  const categories = [...new Set(menus.map(m => m.parent).filter(p => p !== ""))];
+
+  // 1. Render Menu Tanpa Parent (seperti Beranda/Dashboard)
+  const topLevel = menus.filter(m => m.parent === "");
+  topLevel.forEach(m => {
+    menuContainer.appendChild(createMenuButton(m, false));
+  });
+
+  // 2. Render Menu Berdasarkan Group (Parent)
+  categories.forEach(cat => {
+    // Buat Header Kategori (Folder)
+    const header = document.createElement('div');
+    header.className = "text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] px-4 mt-6 mb-2";
+    header.innerText = cat;
+    menuContainer.appendChild(header);
+
+    // Ambil semua menu yang masuk dalam parent ini
+    const subMenus = menus.filter(m => m.parent === cat);
+    subMenus.forEach(sm => {
+      menuContainer.appendChild(createMenuButton(sm, true));
     });
-  }
+  });
+}
+
+// Fungsi Helper untuk Membuat Tombol Menu
+function createMenuButton(m, isSubmenu) {
+  const btn = document.createElement('button');
+  // Styling: Jika submenu, beri margin kiri agar menjorok
+  const paddingClass = isSubmenu ? "pl-8 pr-4" : "px-4";
+  
+  btn.className = `w-full flex items-center gap-3 ${paddingClass} py-3 text-sm font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-all group`;
+  
+  // Gunakan Icon dari Sheet (Emoji) atau dot jika kosong
+  const icon = m.icon ? m.icon : "•";
+  
+  btn.innerHTML = `
+    <span class="text-lg group-hover:scale-110 transition-transform">${icon}</span>
+    <span class="truncate">${m.name}</span>
+  `;
+  
+  btn.onclick = () => {
+    // Hapus status aktif dari tombol lain
+    document.querySelectorAll('#sidebar-menu button').forEach(b => b.classList.remove('bg-zinc-800', 'text-white', 'border-r-2', 'border-amber-600'));
+    // Tambah status aktif ke tombol ini
+    btn.classList.add('bg-zinc-800', 'text-white', 'border-r-2', 'border-amber-600');
+    
+    navigateTo(m.pageId);
+  };
+  
+  return btn;
 }
 
 // FUNGSI MOBILE MENU
