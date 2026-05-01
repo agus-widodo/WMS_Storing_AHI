@@ -86,4 +86,49 @@ document.addEventListener('DOMContentLoaded', () => {
   window.navigateTo('Login');
 });
 
+/* 4.2.2 - Advanced Sidebar Renderer with Grouping */
+window.initializeDashboard = function() {
+  const user = window.userData;
+  if (!user || !user.username) return window.navigateTo('Login');
+
+  document.getElementById('exec-name').innerText = user.nama;
+  document.getElementById('exec-role').innerText = user.role;
+
+  const menuContainer = document.getElementById('exec-sidebar-nav');
+  menuContainer.innerHTML = '';
+
+  // 1. Grouping Logic: Pisahkan menu berdasarkan Parent
+  const groups = {};
+  user.menus.forEach(m => {
+    const p = m.parent || "MAIN_ACCESS";
+    if (!groups[p]) groups[p] = [];
+    groups[p].push(m);
+  });
+
+  // 2. Render Loop
+  Object.keys(groups).forEach(groupName => {
+    const section = document.createElement('div');
+    section.className = "border-b border-zinc-900";
+    
+    // Header Group (FOLDER)
+    section.innerHTML = `
+      <div class="px-6 py-3 bg-zinc-900/30 flex items-center justify-between group cursor-default">
+        <span class="text-[9px] font-black text-zinc-600 uppercase tracking-[0.3em]">${groupName}</span>
+      </div>
+      <div id="group-${groupName.replace(/\s+/g, '')}" class="flex flex-col">
+        ${groups[groupName].map(m => `
+          <button onclick="navigateTo('${m.pageId}')" 
+            class="w-full flex items-center gap-4 px-8 py-3.5 text-[10px] font-bold text-zinc-400 uppercase tracking-[0.2em] hover:bg-zinc-900 hover:text-white transition-all border-l-2 border-transparent hover:border-amber-500">
+            <span class="text-xs">${m.icon || '○'}</span>
+            <span class="truncate">${m.name}</span>
+          </button>
+        `).join('')}
+      </div>
+    `;
+    menuContainer.appendChild(section);
+  });
+
+  // Jalankan Sesi Guardian (Cek tiap 30 detik)
+  if(!window.sessionGuardianActive) startSessionGuardian();
+};
 
