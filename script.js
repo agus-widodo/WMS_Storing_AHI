@@ -51,105 +51,122 @@ window.handleLogout = function() {
   });
 };
 
-// 2. Fungsi Navigasi dengan Safeguard 404
+/* 4.9.2 - Smart Navigation Guard */
 window.navigateTo = async function(pageId) {
-  const container = document.getElementById('app-container');
   const contentArea = document.getElementById('content-area');
+  const titleArea = document.getElementById('current-page-title');
   
+  if (!pageId || pageId.trim() === "") return;
+
   try {
     const response = await fetch(`./pages/${pageId}.html`);
     
-    // Jika file tidak ditemukan (404)
     if (!response.ok) {
+      // JIKA FILE TIDAK ADA DI GITHUB: Render "MODUL_OFFLINE" UI
       if (contentArea) {
-        return render404(pageId);
-      } else {
-        throw new Error("CORE_FILE_MISSING");
+        contentArea.innerHTML = `
+          <div class="flex flex-col items-center justify-center h-full border border-zinc-100 p-20 text-center">
+            <h2 class="text-xs font-black uppercase tracking-[0.5em] text-zinc-900 mb-4 italic">Module_Not_Found</h2>
+            <div class="h-[1px] w-12 bg-zinc-900 mb-8"></div>
+            <p class="text-[10px] font-mono text-zinc-300 uppercase leading-loose max-w-xs">
+              Sistem tidak menemukan file [${pageId}.html] di dalam direktori repository.
+            </p>
+          </div>
+        `;
+        titleArea.innerText = "System_Error";
+        return;
       }
+      throw new Error("PAGE_MISSING");
     }
-    
+
     const html = await response.text();
-    
+    // Jika ganti layout besar (Login/Dashboard)
     if (pageId === 'Login' || pageId === 'Dashboard_Layout') {
-      container.innerHTML = html;
+      document.getElementById('app-container').innerHTML = html;
       if (pageId === 'Dashboard_Layout') setTimeout(window.initializeDashboard, 100);
     } else {
       contentArea.innerHTML = html;
-      document.getElementById('current-page-title').innerText = pageId.replace(/_/g, ' ');
+      titleArea.innerText = pageId.replace(/_/g, ' ');
     }
-    
-    // Execute Scripts
-    const scripts = (contentArea || container).querySelectorAll('script');
-    scripts.forEach(s => {
-      const n = document.createElement('script');
-      n.text = s.text;
-      document.body.appendChild(n).parentNode.removeChild(n);
-    });
 
   } catch (e) {
-    console.error("Critical Nav Error:", e);
-    if (pageId !== 'Login') window.navigateTo('Login');
+    console.error("Nav Error:", e);
+    // Hanya lempar ke login jika core system yang error
+    if (pageId !== 'Login' && !contentArea) window.navigateTo('Login');
   }
 };
 
-// 3. Render Custom 404 (Sharp Executive Style)
-function render404(pageId) {
-  const contentArea = document.getElementById('content-area');
-  contentArea.innerHTML = `
-    <div class="flex flex-col items-center justify-center h-full border-2 border-dashed border-zinc-100 p-12">
-      <span class="text-[100px] font-black text-zinc-50 mb-4 select-none italic">404</span>
-      <h2 class="text-xs font-black uppercase tracking-[0.4em] text-zinc-950 mb-2">Module_Not_Found</h2>
-      <p class="text-[10px] font-mono text-zinc-400 uppercase mb-8">Path: pages/${pageId}.html</p>
-      <div class="h-[1px] w-12 bg-zinc-950 mb-8"></div>
-      <button onclick="window.location.reload()" class="px-8 py-3 bg-zinc-950 text-white text-[10px] font-black uppercase tracking-widest hover:bg-zinc-800 transition-all">
-        Return to Core
-      </button>
-    </div>
-  `;
-}
-
-// 4. Inisialisasi Sidebar Accordion
+/* 4.8.2 - Sharp Hierarchical Sidebar Renderer */
 window.initializeDashboard = function() {
   const user = window.userData;
   const menuContainer = document.getElementById('exec-sidebar-nav');
   if(!user || !menuContainer) return;
 
+  // 1. Update Profile Info
   document.getElementById('exec-name').innerText = user.nama;
   document.getElementById('exec-role').innerText = user.role;
   menuContainer.innerHTML = '';
 
-  // Logika Grouping berdasarkan Kolom Parent di Sheet
-  const groups = {};
-  user.menus.forEach(m => {
-    const p = m.parent || "CORE_ACCESS";
-    if (!groups[p]) groups[p] = [];
-    groups[p].push(m);
+  // 2. Filter Menu: Pisahkan Root (Parent Kosong)
+  const rootMenus = user.menus.filter(m => !m.parent || m.parent === "");
+
+  rootMenus.forEach((item, idx) => {
+    // Cari anak-anaknya (items yang kolom Parent-nya adalah nama item ini)
+    const children = user.menus.filter(m => m.parent === item.name);
+
+    if (item.pageId && item.pageId.trim() !== "") {
+      // KASUS A: Standalone Button (Tanpa Folder)
+      menuContainer.appendChild(renderStandaloneButton(item));
+    } else if (children.length > 0) {
+      // KASUS B: Accordion Folder (Jika Page ID Kosong & Punya Anak)
+      const gId = `group-${idx}`;
+      menuContainer.appendChild(renderAccordionFolder(item, children, gId));
+    }
   });
 
-  Object.keys(groups).forEach((gName, idx) => {
-    const gId = `group-${idx}`;
-    const section = document.createElement('div');
-    section.className = "border-b border-zinc-900";
-    
-    section.innerHTML = `
-      <button onclick="document.getElementById('${gId}').classList.toggle('hidden')" 
-        class="w-full px-8 py-4 flex items-center justify-between bg-zinc-900/10 hover:bg-zinc-900 transition-all group">
-        <span class="text-[9px] font-black text-zinc-600 uppercase tracking-[0.3em] group-hover:text-zinc-400">${gName}</span>
-        <svg class="w-3 h-3 text-zinc-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-width="3"/></svg>
-      </button>
-      <div id="${gId}" class="hidden bg-black/10">
-        ${groups[gName].map(m => `
-          <button onclick="navigateTo('${m.pageId}')" 
-            class="w-full flex items-center gap-4 px-10 py-4 text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] hover:text-white hover:bg-zinc-900 border-l-2 border-transparent hover:border-amber-500 transition-all">
-            <span class="text-xs">${m.icon || '○'}</span>
-            <span class="truncate">${m.name}</span>
-          </button>
-        `).join('')}
-      </div>
-    `;
-    menuContainer.appendChild(section);
-  });
+  if(!window.sessionGuardianActive) startSessionGuardian();
 };
+
+/* Komponen A: Tombol Tunggal (Sharp Style) */
+function renderStandaloneButton(item) {
+  const btn = document.createElement('button');
+  btn.className = "w-full flex items-center gap-4 px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] hover:bg-zinc-900 hover:text-white transition-all border-b border-zinc-900";
+  btn.innerHTML = `
+    <span class="text-xs grayscale group-hover:grayscale-0">${item.icon || '■'}</span>
+    <span class="truncate">${item.name}</span>
+  `;
+  btn.onclick = () => window.navigateTo(item.pageId);
+  return btn;
+}
+
+/* Komponen B: Folder Accordion (Sharp Style) */
+function renderAccordionFolder(parent, children, gId) {
+  const container = document.createElement('div');
+  container.className = "border-b border-zinc-900";
+  
+  container.innerHTML = `
+    <button onclick="document.getElementById('${gId}').classList.toggle('hidden'); this.querySelector('svg').classList.toggle('rotate-180')" 
+      class="w-full px-8 py-4 flex items-center justify-between bg-zinc-900/30 hover:bg-zinc-900 transition-all group">
+      <div class="flex items-center gap-4">
+        <span class="text-xs">${parent.icon || '📁'}</span>
+        <span class="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em] group-hover:text-zinc-400">${parent.name}</span>
+      </div>
+      <svg class="w-3 h-3 text-zinc-800 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path d="M19 9l-7 7-7-7" stroke-width="3"/>
+      </svg>
+    </button>
+    <div id="${gId}" class="hidden bg-black/20">
+      ${children.map(m => `
+        <button onclick="navigateTo('${m.pageId}')" 
+          class="w-full flex items-center gap-4 px-12 py-3.5 text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] hover:text-white hover:bg-zinc-900 border-l-2 border-transparent hover:border-amber-500 transition-all">
+          <span class="text-xs grayscale">${m.icon || '○'}</span>
+          <span class="truncate">${m.name}</span>
+        </button>
+      `).join('')}
+    </div>
+  `;
+  return container;
+}
 
 /* 1.1.3 - App Entry Point */
 document.addEventListener('DOMContentLoaded', () => {
