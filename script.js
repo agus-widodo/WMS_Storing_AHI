@@ -1,3 +1,55 @@
+/* =========================================
+   SISTEM KEAMANAN: ANTI MULTI-TAB BROWSER
+========================================= */
+const tabChannel = new BroadcastChannel('wms_security_channel');
+const TAB_ID = Math.random().toString(36).substring(7);
+
+// 1. Radar Pendeteksi Tab Lain
+function enforceSingleTab() {
+  const isVerified = sessionStorage.getItem('tab_verified');
+  
+  if (!isVerified) {
+    // Jika tab baru buka, teriak "Ada tab lain gak?"
+    let tabConflict = false;
+    const radar = (e) => { if (e.data.type === 'ALREADY_ACTIVE') tabConflict = true; };
+    
+    tabChannel.addEventListener('message', radar);
+    tabChannel.postMessage({ type: 'NEW_TAB_OPENED', id: TAB_ID });
+
+    // Tunggu 500ms, jika ada jawaban, hancurkan tab ini
+    setTimeout(() => {
+      tabChannel.removeEventListener('message', radar);
+      if (tabConflict) {
+        document.body.innerHTML = `
+          <div class="h-screen flex flex-col items-center justify-center bg-zinc-950 text-white p-6 text-center">
+            <div class="w-16 h-16 bg-red-500/20 text-red-500 flex items-center justify-center rounded-full mb-6 border border-red-500">
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            </div>
+            <h1 class="text-xl font-black tracking-widest uppercase mb-2">Security Violation</h1>
+            <p class="text-[10px] text-zinc-400 uppercase tracking-widest leading-loose max-w-xs">
+              Aplikasi sudah terbuka di tab lain. Sistem hanya mengizinkan 1 sesi aktif per browser demi keamanan data.
+            </p>
+          </div>
+        `;
+        throw new Error("MULTIPLE_TABS_BLOCKED");
+      } else {
+        sessionStorage.setItem('tab_verified', 'true');
+      }
+    }, 500);
+  }
+}
+
+// 2. Mesin Penjawab (Jika ada tab baru yang buka, tab lama akan berteriak)
+tabChannel.onmessage = (e) => {
+  if (e.data.type === 'NEW_TAB_OPENED' && e.data.id !== TAB_ID) {
+    tabChannel.postMessage({ type: 'ALREADY_ACTIVE', id: TAB_ID });
+  }
+};
+
+// Jalankan radar segera setelah file JS dibaca
+enforceSingleTab();
+/* ========================================= */
+
 /* 1.1.1 - Configuration & Environment Setup */
 const API_CONFIG = {
   // Masukkan URL Apps Script Anda di sini
