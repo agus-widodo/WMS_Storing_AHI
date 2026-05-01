@@ -2,7 +2,7 @@
 const API_CONFIG = {
   // Masukkan URL Apps Script Anda di sini
   DEV_URL: "https://script.google.com/macros/s/AKfycbxnpvo68iaT0IZwBiuCvPOf_Cx8wqHx8t_SRUGlrU3N/dev", 
-  PROD_URL: "https://script.google.com/macros/s/AKfycbyiOtJwKoIoC8Z7a9c_qVwv6_b5Yz4uTe3OzJEYe6K7ZMfxB7Zuy0PX2fZaqO9a_aiU_w/exec",
+  PROD_URL: "https://script.google.com/macros/s/AKfycbxJwZogtILb2PJPGx7K5XVtpeZzhidtnmfFl8tG45uJVpbMn6LIK74_-CXr4Stqyd-LAQ/exec",
   IS_LOCAL: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
 };
 
