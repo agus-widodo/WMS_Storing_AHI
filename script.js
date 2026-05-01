@@ -44,7 +44,7 @@ tabChannel.onmessage = (e) => {
    2. KONFIGURASI & API CORE
 ========================================= */
 const API_CONFIG = {
-  PROD_URL: "https://script.google.com/macros/s/AKfycbxJwZogtiLb2PJPgx7K5XVtpeZzhidtnmfFl8tg45uJVpbMn6lIK74_-CXr4Stqyd-LAQ/exec"
+  PROD_URL: "https://script.google.com/macros/s/AKfycbwSuyE8PZO0CECPSvFyK2BbZYiECn238piuJULtDKbkg2MTJPgDiHt05i-NWmDs09vB0Q/exec"
 };
 
 window.userData = { username: null, nama: null, role: null, menus: [] };
