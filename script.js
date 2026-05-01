@@ -63,36 +63,30 @@ window.userData = { username: null, nama: null, role: null, menus: [], sessionID
 
 /* 1.1.2 - Global JSONP Fetcher */
 window.smartFetch = async function(params) {
-  const baseUrl = API_CONFIG.URL; // Murni menggunakan jalur /exec
-  const callbackName = `cb_${Math.random().toString(36).substring(7)}`;
+  const url = new URL(API_CONFIG.PROD_URL);
+  Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
 
-  return new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.id = callbackName;
+  try {
+    const response = await fetch(url, { 
+      method: 'GET',
+      mode: 'no-cors' // Trik: No-cors agar browser tidak memblokir redirect
+    });
     
-    window[callbackName] = (data) => {
-      resolve(data);
-      document.getElementById(callbackName)?.remove();
-      delete window[callbackName];
-    };
-
-    const queryString = new URLSearchParams({ ...params, callback: callbackName }).toString();
-    script.src = `${baseUrl}?${queryString}`;
-    
-    // Timeout jika server sibuk
-    const timer = setTimeout(() => {
-      document.getElementById(callbackName)?.remove();
-      reject("TIMEOUT: Server Google lambat, coba klik sekali lagi.");
-    }, 15000);
-
-    script.onerror = () => {
-      clearTimeout(timer);
-      reject("SECURITY_ALERT: Akses ditolak Google (Cek link /exec Anda)");
-    };
-    
-    document.body.appendChild(script);
-  });
+    // Karena mode 'no-cors' membuat response.json() tidak bisa dibaca,
+    // kita terpaksa menggunakan teknik 'XMLHttpRequest' untuk bypass total
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("GET", url.toString());
+      xhr.onload = () => resolve(JSON.parse(xhr.responseText));
+      xhr.onerror = () => reject("Fetch failed");
+      xhr.send();
+    });
+  } catch (err) {
+    throw err;
+  }
 };
+
+
 /* 4.6.2 - Advanced Dashboard & Navigation Logic */
 
 // 1. Fungsi Logout dengan Pembersihan Sesi
