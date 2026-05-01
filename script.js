@@ -55,9 +55,7 @@ const API_CONFIG = {
   // Masukkan URL Apps Script Anda di sini
   DEV_URL: "https://script.google.com/macros/s/AKfycbxnpvo68iaT0IZwBiuCvPOf_Cx8wqHx8t_SRUGlrU3N/dev", 
   PROD_URL: "https://script.google.com/macros/s/AKfycbxJwZogtILb2PJPGx7K5XVtpeZzhidtnmfFl8tG45uJVpbMn6LIK74_-CXr4Stqyd-LAQ/exec",
-  IS_LOCAL: window.location.hostname === 'localhost' || 
-            window.location.hostname === '127.0.0.1' || 
-            window.location.search.includes('dev=true')
+  IS_LOCAL: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
 };
 
 window.userData = { username: null, nama: null, role: null, menus: [] };
