@@ -17,6 +17,12 @@
     </div>
   </div>
 
-  <script src="script.js"></script>
+    <script>
+    // AUTO CACHE-BUSTER: Memaksa HP selalu mengambil script.js versi terbaru
+    const script = document.createElement('script');
+    script.src = 'script.js?v=' + new Date().getTime(); 
+    document.body.appendChild(script);
+  </script>
+  
 </body>
 </html>
