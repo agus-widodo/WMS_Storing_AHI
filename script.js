@@ -51,50 +51,62 @@ window.handleLogout = function() {
   });
 };
 
-/* 4.9.2 - Smart Navigation Guard */
+// 2. Fungsi Navigasi dengan Safeguard 404
 window.navigateTo = async function(pageId) {
+  const container = document.getElementById('app-container');
   const contentArea = document.getElementById('content-area');
-  const titleArea = document.getElementById('current-page-title');
   
-  if (!pageId || pageId.trim() === "") return;
-
   try {
     const response = await fetch(`./pages/${pageId}.html`);
     
+    // Jika file tidak ditemukan (404)
     if (!response.ok) {
-      // JIKA FILE TIDAK ADA DI GITHUB: Render "MODUL_OFFLINE" UI
       if (contentArea) {
-        contentArea.innerHTML = `
-          <div class="flex flex-col items-center justify-center h-full border border-zinc-100 p-20 text-center">
-            <h2 class="text-xs font-black uppercase tracking-[0.5em] text-zinc-900 mb-4 italic">Module_Not_Found</h2>
-            <div class="h-[1px] w-12 bg-zinc-900 mb-8"></div>
-            <p class="text-[10px] font-mono text-zinc-300 uppercase leading-loose max-w-xs">
-              Sistem tidak menemukan file [${pageId}.html] di dalam direktori repository.
-            </p>
-          </div>
-        `;
-        titleArea.innerText = "System_Error";
-        return;
+        return render404(pageId);
+      } else {
+        throw new Error("CORE_FILE_MISSING");
       }
-      throw new Error("PAGE_MISSING");
     }
-
+    
     const html = await response.text();
-    // Jika ganti layout besar (Login/Dashboard)
+    
     if (pageId === 'Login' || pageId === 'Dashboard_Layout') {
-      document.getElementById('app-container').innerHTML = html;
+      container.innerHTML = html;
       if (pageId === 'Dashboard_Layout') setTimeout(window.initializeDashboard, 100);
     } else {
       contentArea.innerHTML = html;
-      titleArea.innerText = pageId.replace(/_/g, ' ');
+      document.getElementById('current-page-title').innerText = pageId.replace(/_/g, ' ');
     }
+    
+    // Execute Scripts
+    const scripts = (contentArea || container).querySelectorAll('script');
+    scripts.forEach(s => {
+      const n = document.createElement('script');
+      n.text = s.text;
+      document.body.appendChild(n).parentNode.removeChild(n);
+    });
 
   } catch (e) {
-    console.error("Nav Error:", e);
-    // Hanya lempar ke login jika core system yang error
-    if (pageId !== 'Login' && !contentArea) window.navigateTo('Login');
+    console.error("Critical Nav Error:", e);
+    if (pageId !== 'Login') window.navigateTo('Login');
   }
 };
+
+// 3. Render Custom 404 (Sharp Executive Style)
+function render404(pageId) {
+  const contentArea = document.getElementById('content-area');
+  contentArea.innerHTML = `
+    <div class="flex flex-col items-center justify-center h-full border-2 border-dashed border-zinc-100 p-12">
+      <span class="text-[100px] font-black text-zinc-50 mb-4 select-none italic">404</span>
+      <h2 class="text-xs font-black uppercase tracking-[0.4em] text-zinc-950 mb-2">Module_Not_Found</h2>
+      <p class="text-[10px] font-mono text-zinc-400 uppercase mb-8">Path: pages/${pageId}.html</p>
+      <div class="h-[1px] w-12 bg-zinc-950 mb-8"></div>
+      <button onclick="window.location.reload()" class="px-8 py-3 bg-zinc-950 text-white text-[10px] font-black uppercase tracking-widest hover:bg-zinc-800 transition-all">
+        Return to Core
+      </button>
+    </div>
+  `;
+}
 
 /* 4.8.2 - Sharp Hierarchical Sidebar Renderer */
 window.initializeDashboard = function() {
