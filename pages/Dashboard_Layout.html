@@ -1,59 +1,98 @@
-<!-- 4.1.3 - Dashboard UI (Bento-Industrial Style) -->
-<div class="flex h-screen overflow-hidden bg-[#f4f4f5]">
-  
-  <!-- MOBILE OVERLAY -->
-  <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/40 z-40 hidden md:hidden backdrop-blur-sm"></div>
+<script>
 
-  <!-- SIDEBAR (INDUSTRIAL DARK) -->
-  <aside id="sidebar-container" class="fixed inset-y-0 left-0 z-50 w-64 bg-zinc-950 text-zinc-400 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out flex flex-col border-r border-zinc-800">
-    <div class="p-6 border-b border-zinc-900 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center text-zinc-950 font-black italic shadow-lg shadow-amber-500/20">W</div>
-        <span class="text-white font-black tracking-tighter text-lg uppercase italic">WMS<span class="text-amber-500">PRO</span></span>
-      </div>
-      <button onclick="toggleSidebar()" class="md:hidden text-zinc-500 italic font-mono text-[10px]">ESC</button>
+/* 4.1.1 - Dashboard State & Security Timer */
+window.dashboardConfig = {
+  checkInterval: 30000, // Cek validitas sesi tiap 30 detik
+  sidebarWidth: "w-72"
+};
+  
+/* 4.1.2 - Dashboard Controller & RBAC Renderer */
+window.initializeDashboard = function() {
+  const user = window.userData;
+  if (!user || !user.sessionID) return window.navigateTo('Login');
+
+  // Inject Profile
+  document.getElementById('exec-name').innerText = user.nama;
+  document.getElementById('exec-role').innerText = user.role;
+
+  // Render Role-Based Menu
+  const menuContainer = document.getElementById('exec-sidebar-nav');
+  menuContainer.innerHTML = user.menus.map(m => `
+    <button onclick="navigateTo('${m.pageId}')" 
+      class="w-full flex items-center gap-4 px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] border-b border-zinc-900 hover:bg-zinc-900 hover:text-white transition-all group">
+      <span class="text-zinc-600 group-hover:text-amber-500">${m.icon || '■'}</span>
+      <span>${m.name}</span>
+    </button>
+  `).join('');
+
+  // Start Session Guardian (Anti-Multi Device)
+  startSessionGuardian();
+};
+
+async function startSessionGuardian() {
+  setInterval(async () => {
+    const isValid = await window.smartFetch({
+      action: "validateSession",
+      username: window.userData.username,
+      sessionID: window.userData.sessionID
+    });
+    
+    if (!isValid) {
+      Swal.fire({
+        title: 'SESSION_EXPIRED',
+        text: 'Akun login di perangkat lain atau sesi berakhir.',
+        icon: 'warning',
+        confirmButtonColor: '#000',
+        customClass: { popup: 'rounded-none' }
+      }).then(() => handleLogout());
+    }
+  }, window.dashboardConfig.checkInterval);
+}
+</script>
+
+<!-- 4.1.3 - UI Component: Sharp Executive Dashboard -->
+<div class="flex h-screen overflow-hidden bg-white text-zinc-950 font-sans">
+  
+  <!-- SIDEBAR: SHARP INDUSTRIAL DARK -->
+  <aside class="w-72 bg-zinc-950 text-zinc-400 flex flex-col border-r border-zinc-200">
+    <div class="p-8 border-b border-zinc-900">
+      <p class="text-[9px] font-mono text-zinc-600 uppercase tracking-[0.4em] mb-2">Executive Access</p>
+      <h2 class="text-2xl font-black tracking-tighter text-white uppercase italic">
+        WMS<span class="text-zinc-500 font-light">PRO</span>
+      </h2>
     </div>
 
-    <!-- SIDEBAR NAV -->
-    <nav id="sidebar-menu" class="flex-1 overflow-y-auto p-4 space-y-1">
-      <!-- Menu dimuat via Modul 4.1.2 -->
+    <nav id="exec-sidebar-nav" class="flex-1 overflow-y-auto">
+      <!-- Menus Injected by RBAC Logic -->
     </nav>
 
-    <!-- SIDEBAR FOOTER -->
-    <div class="p-4 border-t border-zinc-900 flex items-center gap-3">
-      <div class="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] font-mono text-zinc-500">ID</div>
-      <div class="flex-1 overflow-hidden">
-        <p id="user-name-mobile" class="text-xs font-bold text-zinc-200 truncate italic">---</p>
-        <p class="text-[9px] font-mono text-zinc-600 uppercase tracking-tighter">Stable Node</p>
+    <div class="p-8 border-t border-zinc-900 bg-black">
+      <div class="flex items-center justify-between">
+        <div class="flex flex-col">
+          <span id="exec-name" class="text-[11px] font-black text-white uppercase tracking-wider">---</span>
+          <span id="exec-role" class="text-[9px] font-bold text-zinc-600 uppercase tracking-tighter">---</span>
+        </div>
+        <button onclick="handleLogout()" class="p-2 text-zinc-600 hover:text-white transition-colors">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+        </button>
       </div>
-      <button onclick="handleLogout()" class="p-2 hover:bg-zinc-900 rounded-lg text-zinc-600 hover:text-red-400 transition-colors">
-        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-      </button>
     </div>
   </aside>
 
-  <!-- MAIN VIEW AREA -->
-  <main class="flex-1 flex flex-col overflow-hidden">
-    <!-- STICKY HEADER -->
-    <header class="h-16 bg-white border-b border-zinc-200 flex items-center justify-between px-6 z-30">
-      <div class="flex items-center gap-4">
-        <button onclick="toggleSidebar()" class="md:hidden p-2 text-zinc-500"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg></button>
-        <h2 id="page-title" class="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400">System Dashboard</h2>
+  <!-- MAIN AREA -->
+  <main class="flex-1 flex flex-col">
+    <header class="h-20 bg-white border-b border-zinc-100 flex items-center justify-between px-10">
+      <div class="flex items-center gap-6">
+        <div class="h-8 w-[2px] bg-zinc-950"></div>
+        <h3 id="current-page-title" class="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-400">System Monitoring</h3>
       </div>
-      
-      <div class="flex items-center gap-4 border-l border-zinc-100 pl-4">
-        <div class="text-right hidden sm:block">
-          <p id="user-name-display" class="text-xs font-black text-zinc-900 uppercase italic">---</p>
-          <p id="user-role-display" class="text-[9px] font-bold text-amber-600 uppercase tracking-tighter">---</p>
-        </div>
+      <div class="flex items-center gap-4 font-mono text-[10px] text-zinc-300">
+        <span>V.3.2.0-STABLE</span>
       </div>
     </header>
 
-    <!-- CONTENT (SCROLLABLE) -->
-    <div id="content-area" class="flex-1 overflow-y-auto bg-[#fafafa] p-6">
-      <div class="flex items-center justify-center h-full opacity-20 italic">
-        <p class="font-mono text-[10px] uppercase tracking-[1em]">Industrial Node Ready</p>
-      </div>
+    <div id="content-area" class="flex-1 overflow-y-auto p-12 bg-[#fcfcfc]">
+      <!-- Sub-pages render here -->
     </div>
   </main>
 </div>
