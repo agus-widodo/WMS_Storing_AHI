@@ -9,46 +9,46 @@ const UI_THEME = {
 };
 
   
-  /* 3.2.2 - Core Login Logic (Inherited from V.01) */
-  async function handleLogin(e) {
-    e.preventDefault();
-    const btn = document.getElementById('login-btn');
-    const formData = new FormData(e.target);
-    const data = Object.fromEntries(formData.entries());
+/* 2.4.2 - Security-Aware Login Handler */
+window.handleLogin = async function(e) {
+  e.preventDefault();
+  const btn = document.getElementById('login-btn');
+  const formData = new FormData(e.target);
+  const { username, password } = Object.fromEntries(formData.entries());
 
-    btn.disabled = true;
-    btn.innerHTML = `<span class="animate-pulse tracking-widest">AUTHENTICATING...</span>`;
+  btn.disabled = true;
+  btn.innerHTML = `<span class="animate-pulse italic">SECURE_CONNECTING...</span>`;
 
-    try {
-      const res = await window.smartFetch({
-        action: "checkLogin",
-        username: data.username,
-        password: data.password
-      });
+  try {
+    const res = await window.smartFetch({
+      action: "checkLogin",
+      username: username,
+      password: password
+    });
 
-      if (res.status === "success") {
-        localStorage.setItem("activeUser", res.username);
-        window.userData = res;
-        
-        // Executive Transition: Slide-out
-        document.getElementById('login-panel').classList.add('-translate-x-10', 'opacity-0');
-        setTimeout(() => window.navigateTo('Dashboard_Layout'), 300);
-      } else {
-        throw new Error(res.message);
-      }
-    } catch (err) {
-      Swal.fire({ 
-        icon: 'error', 
-        title: 'ACCESS_DENIED', 
-        text: err.message || "Connection Error",
-        confirmButtonText: 'RETRY',
-        confirmButtonColor: '#000000',
-        customClass: { popup: 'rounded-none' } 
-      });
-      btn.disabled = false;
-      btn.innerHTML = `AUTHORIZE ACCESS <span class="ml-2 font-light">→</span>`;
+    if (res.status === "success") {
+      // Simpan Token Sesi untuk Validasi Anti-Multi Device
+      localStorage.setItem("activeUser", res.username);
+      localStorage.setItem("sessionID", res.sessionID);
+      window.userData = res;
+      
+      window.navigateTo('Dashboard_Layout');
+    } else {
+      throw new Error(res.message);
     }
+  } catch (err) {
+    Swal.fire({ 
+      icon: 'error', 
+      title: 'SECURITY_ALERT', 
+      text: err.message,
+      confirmButtonColor: '#000',
+      customClass: { popup: 'rounded-none' }
+    });
+    btn.disabled = false;
+    btn.innerHTML = `AUTHORIZE ACCESS →`;
   }
+};
+  
 </script>
 
 <!-- 3.2.3 - UI Component: Sharp Executive SaaS -->
