@@ -1,115 +1,13 @@
-/* THE INDUSTRIALIST DESIGN SYSTEM */
-:root {
-  --primary: #d97706; /* Amber-600 */
-  --primary-hover: #b45309;
-  --bg-app: #f4f4f5; /* Zinc-100 */
-  --bg-card: #ffffff;
-  --text-main: #18181b; /* Zinc-900 */
-  --text-muted: #71717a; /* Zinc-500 */
-  --border: #e4e4e7; /* Zinc-200 */
-  --font-ui: 'Inter', sans-serif;
-  --font-data: 'JetBrains Mono', monospace;
-}
+/* Sharp Industrial Scrollbar */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+nav#exec-sidebar-nav { scrollbar-width: none; }
 
-body {
-  font-family: var(--font-ui);
-  background-color: var(--bg-app);
-  color: var(--text-main);
-  letter-spacing: -0.01em;
-}
+/* Custom Animation for Accordion */
+.rotate-180 { transform: rotate(180deg); }
 
-/* Typography for Data Numbers */
-.font-data {
-  font-family: var(--font-data) !important;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Industrial Components */
-.btn-industrial {
-  background-color: var(--primary);
-  color: white;
-  font-weight: 600;
-  padding: 0.5rem 1rem;
-  border-radius: 4px; /* Sudut lebih tegas */
-  transition: all 0.2s ease;
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
-  font-size: 0.875rem;
-}
-
-.btn-industrial:hover {
-  background-color: var(--primary-hover);
-  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.2);
-}
-
-.input-industrial {
-  border: 1px solid var(--border);
-  background-color: #fafafa;
-  border-radius: 4px;
-  padding: 0.6rem 0.8rem;
-  width: 100%;
-  transition: border-color 0.2s;
-}
-
-.input-industrial:focus {
-  border-color: var(--primary);
-  ring: 2px rgba(217, 119, 6, 0.1);
-  background-color: white;
-}
-
-/* Compact Scrollbar */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 10px; }
-
-/* Sidebar Group Header */
-#sidebar-menu div {
-  user-select: none;
-}
-
-/* Aktif Menu Style */
-.active-menu {
-  background-color: #27272a; /* Zinc-800 */
+/* Active Menu Style */
+.menu-active {
+  background-color: #09090b !important;
   color: white !important;
-  border-right: 3px solid #d97706; /* Amber-600 */
-}
-
-/* Transisi Hover Icon */
-#sidebar-menu button span:first-child {
-  width: 24px;
-  display: inline-block;
-  text-align: center;
-}
-
-/* Sidebar Group Styles */
-.menu-group-content {
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.3s ease-out;
-  border-left: 1px solid #3f3f46; /* Garis vertikal pandu (Zinc-700) */
-  margin-left: 1.75rem; /* Menjorokkan submenu */
-}
-
-.menu-group-content.open {
-  max-height: 1000px; /* Nilai besar agar bisa menampung banyak menu */
-  transition: max-height 0.5s ease-in;
-}
-
-/* Animasi Chevron (Panah) */
-.chevron-icon {
-  transition: transform 0.3s ease;
-}
-
-.chevron-rotate {
-  transform: rotate(180deg);
-}
-
-/* Indentasi Submenu */
-.submenu-item {
-  padding-left: 1.5rem !important;
-  font-size: 0.75rem !important;
-  color: #a1a1aa !important; /* Zinc-400 */
-}
-
-.submenu-item:hover {
-  color: white !important;
+  border-left-color: #d97706 !important;
 }
