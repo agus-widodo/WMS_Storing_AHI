@@ -122,6 +122,14 @@ window.navigateTo = async function(pageId) {
     if (pageId !== 'Login') window.navigateTo('Login');
   }
 };
+
+    /* =========================================================
+   5. BOOTLOADER (START APP)
+========================================================= */
+document.addEventListener('DOMContentLoaded', () => {
+    // Jalankan navigasi awal
+    window.navigateTo('Login');
+});
     
   </script>
 
