@@ -96,99 +96,80 @@ window.navigateTo = async function(pageId) {
 window.initializeDashboard = function() {
   const user = window.userData;
   const nav = document.getElementById('exec-sidebar-nav');
-  if (!nav || !user || !user.menus) return;
+  if (!user || !user.username || !nav) return window.navigateTo('Login');
 
-  // Render Info User
-  if (document.getElementById('exec-name')) document.getElementById('exec-name').innerText = user.nama || "GUEST";
-  if (document.getElementById('exec-role')) document.getElementById('exec-role').innerText = user.role || "UNKNOWN";
-  
+  if(document.getElementById('exec-name')) document.getElementById('exec-name').innerText = user.nama;
+  if(document.getElementById('exec-role')) document.getElementById('exec-role').innerText = user.role;
   nav.innerHTML = '';
 
-  // WADAH PENYIMPANAN SEMENTARA
-  const standaloneButtons = [];
-  const folderMap = new Map(); // Menggunakan Map agar lebih kuat membaca Key
+  const standalone = [];
+  const folders = {};
 
-  // 1. TAHAP PEMILAHAN: PISAHKAN TOMBOL VS FOLDER
   user.menus.forEach(m => {
-    // Paksa semua spasi hilang dan jadi huruf besar agar tidak ada salah eja dari sheet
-    const parentKey = (m.parent || "").toString().trim().toUpperCase();
-    const pageId = (m.pageId || "").toString().trim();
-    const menuName = (m.name || "").toString().trim();
-    
-    // Jika tidak ada parent
-    if (parentKey === "") {
-      if (pageId !== "") {
-        // Ini adalah tombol mandiri (Beranda, Personal)
-        standaloneButtons.push(m);
-      } else {
-        // Ini adalah KEPALA FOLDER (Form Kerja, Report)
-        const folderKey = menuName.toUpperCase();
-        if (!folderMap.has(folderKey)) {
-          folderMap.set(folderKey, { title: menuName, icon: m.icon, children: [] });
-        }
-      }
-    } else {
-      // Jika ADA parent, berarti ini ANAK FOLDER (CC Transaksi, Penurunan, dll)
-      // Cek apakah Bapaknya (Foldernya) sudah dibuat? Kalau belum, buatkan paksa.
-      if (!folderMap.has(parentKey)) {
-        folderMap.set(parentKey, { title: m.parent.trim(), icon: '📁', children: [] });
-      }
-      // Masukkan anak ini ke dalam folder bapaknya
-      folderMap.get(parentKey).children.push(m);
+    if (m.parent === "") {
+      if (m.pageId !== "") standalone.push(m);
+      else folders[m.name] = { title: m.name, icon: m.icon, children: [] };
     }
   });
 
-  // 2. RENDER TOMBOL MANDIRI (Beranda, Personal)
-  standaloneButtons.forEach(m => {
+  user.menus.forEach(m => {
+    if (m.parent !== "") {
+      if (!folders[m.parent]) folders[m.parent] = { title: m.parent, icon: '📁', children: [] };
+      folders[m.parent].children.push(m);
+    }
+  });
+
+  standalone.forEach(m => {
     const btn = document.createElement('button');
-    btn.className = "w-full flex items-center gap-4 px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] hover:bg-zinc-900 hover:text-white transition-all border-b border-zinc-900 text-left group";
-    btn.innerHTML = `<span class="text-xs grayscale group-hover:grayscale-0">${m.icon || '■'}</span><span class="truncate">${m.name}</span>`;
+    btn.className = "w-full flex items-center gap-4 px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] border-b border-zinc-900 text-left hover:bg-zinc-900";
+    btn.innerHTML = `<span>${m.icon||'■'}</span><span>${m.name}</span>`;
     btn.onclick = () => window.navigateTo(m.pageId);
     nav.appendChild(btn);
   });
 
-  // 3. RENDER FOLDER ACCORDION
-  let fIndex = 0;
-  folderMap.forEach((folderData, key) => {
-    // Abaikan jika folder kosong (misal: Kepala folder ada di sheet, tapi belum ada anak menu-nya yg sesuai role)
-    if (folderData.children.length === 0) return;
-
-    const gId = 'folder-acc-' + fIndex++;
+  let fIdx = 0;
+  for (const key in folders) {
+    const f = folders[key];
+    if (f.children.length === 0) continue;
+    
+    const gid = 'acc-' + fIdx++;
     const div = document.createElement('div');
     div.className = "border-b border-zinc-900";
-    
-    // HTML Tombol Pembuka Folder
     div.innerHTML = `
-      <button onclick="document.getElementById('${gId}').classList.toggle('hidden'); this.querySelector('.arrow-icon').classList.toggle('rotate-180')" 
-        class="w-full px-8 py-4 flex items-center justify-between bg-zinc-900/40 hover:bg-zinc-900 transition-all group outline-none">
-        <div class="flex items-center gap-4">
-          <span class="text-xs grayscale opacity-80">${folderData.icon || '📁'}</span>
-          <span class="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em] group-hover:text-zinc-300">${folderData.title}</span>
-        </div>
-        <svg class="arrow-icon w-3 h-3 text-zinc-600 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-width="3"/></svg>
+      <button onclick="document.getElementById('${gid}').classList.toggle('hidden'); this.querySelector('svg').classList.toggle('rotate-180')" class="w-full flex items-center justify-between px-8 py-4 bg-zinc-900/40 text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em] outline-none group hover:bg-zinc-900">
+        <div class="flex items-center gap-4"><span>${f.icon||'📁'}</span><span class="group-hover:text-zinc-300">${f.title}</span></div>
+        <svg class="w-3 h-3 transition-transform text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-width="3"/></svg>
       </button>
-      
-      <!-- Wadah Anak Menu (Disembunyikan secara default) -->
-      <div id="${gId}" class="hidden flex-col bg-black/50 shadow-inner py-2">
-        ${folderData.children.map(child => `
-          <button onclick="window.navigateTo('${child.pageId}'); if(window.innerWidth < 768) window.toggleMobileSidebar(true);" 
-            class="w-full flex items-center gap-4 px-12 py-3.5 text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] hover:text-white hover:bg-zinc-900 border-l-2 border-transparent hover:border-amber-500 transition-all text-left group">
-            <span class="text-xs grayscale opacity-30 group-hover:opacity-100 group-hover:grayscale-0 transition-all">${child.icon || '○'}</span>
-            <span class="truncate">${child.name}</span>
+      <div id="${gid}" class="hidden flex-col bg-black/40 py-2">
+        ${f.children.map(c => `
+          <button onclick="window.navigateTo('${c.pageId}'); if(window.innerWidth < 768) window.toggleMobileSidebar(true);" class="w-full flex items-center gap-4 px-12 py-3.5 text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] text-left hover:text-white hover:bg-zinc-900 border-l-2 border-transparent hover:border-amber-500">
+            <span class="grayscale opacity-50 text-xs">${c.icon||'○'}</span><span class="truncate">${c.name}</span>
           </button>
         `).join('')}
       </div>
     `;
     nav.appendChild(div);
-  });
+  }
+
+  // MULAI DETAK JANTUNG
+  startHeartbeat();
 };
+
+function startHeartbeat() {
+  if(window.heartbeatInterval) clearInterval(window.heartbeatInterval);
+  window.heartbeatInterval = setInterval(() => {
+    if(window.userData.username) {
+      window.smartFetch({ action: "heartbeat", username: window.userData.username });
+    }
+  }, 60000); // Kirim sinyal hidup setiap 1 menit
+}
 
 /* 4. AUTHENTICATION HANDLERS */
 window.handleLogin = async function(e) {
   e.preventDefault();
   const btn = document.getElementById('login-btn');
-  if(btn) { btn.disabled = true; btn.innerText = "AUTHENTICATING..."; }
-
+  if(btn) btn.disabled = true;
+  
   try {
     const res = await window.smartFetch({ action: "checkLogin", username: e.target.username.value, password: e.target.password.value });
     if (res.status === "success") {
@@ -196,42 +177,17 @@ window.handleLogin = async function(e) {
       window.userData = res;
       window.navigateTo('Dashboard_Layout');
     } else {
-      Swal.fire('Akses Ditolak', res.message, 'error');
-      if(btn) { btn.disabled = false; btn.innerText = "AUTHORIZE ACCESS"; }
+      Swal.fire('Login Ditolak', res.message, 'warning'); // Akan memunculkan "Akun sedang digunakan"
+      if(btn) btn.disabled = false;
     }
-  } catch (err) {
-    Swal.fire('Error', err.message, 'error');
-    if(btn) { btn.disabled = false; btn.innerText = "AUTHORIZE ACCESS"; }
-  }
+  } catch(e) { Swal.fire('Error', 'Server Error', 'error'); if(btn) btn.disabled = false; }
 };
 
-function startDeviceGuardian() {
-  if (window.sessionGuardian) clearInterval(window.sessionGuardian);
-  
-  window.sessionGuardian = setInterval(async () => {
-    const user = window.userData;
-    if (!user || !user.sessionID) return;
-
-    try {
-      const res = await window.smartFetch({ action: "validateSession", username: user.username, sessionID: user.sessionID });
-      // Jika sessionID di server sudah berbeda (berarti dia login di tempat lain)
-      if (res.status === "success" && res.valid === false) {
-        clearInterval(window.sessionGuardian);
-        Swal.fire({
-          title: 'SESI DIAMBIL ALIH',
-          text: 'Akun ini baru saja login di perangkat/tab lain. Sesi Anda dihentikan.',
-          icon: 'warning',
-          allowOutsideClick: false,
-          confirmButtonColor: '#000'
-        }).then(() => window.handleLogout());
-      }
-    } catch(e) { console.log("Guardian Check Failed", e); }
-  }, 30000); // 30.000 ms = 30 detik
-}
-
-window.handleLogout = function() {
-  localStorage.clear();
-  window.location.reload();
+window.handleLogout = async function() {
+  const user = window.userData.username || localStorage.getItem('activeUser');
+  if (user) await window.smartFetch({ action: "logoutUser", username: user }); // Set jadi Nonaktif di server
+  localStorage.clear(); 
+  window.location.reload(); 
 };
 
 /* 5. MOBILE CONTROLLER */
