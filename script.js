@@ -93,13 +93,12 @@ window.navigateTo = async function(pageId) {
 };
 
 /* 3. SIDEBAR ACCORDION ENGINE (ANTI-DOUBLE) */
-/* --- 3. SIDEBAR ACCORDION ENGINE (BRUTAL GROUPING) --- */
 window.initializeDashboard = function() {
   const user = window.userData;
   const nav = document.getElementById('exec-sidebar-nav');
   if (!nav || !user || !user.menus) return;
 
-  // Info Profil
+  // Render Info User
   if (document.getElementById('exec-name')) document.getElementById('exec-name').innerText = user.nama || "GUEST";
   if (document.getElementById('exec-role')) document.getElementById('exec-role').innerText = user.role || "UNKNOWN";
   
@@ -107,36 +106,39 @@ window.initializeDashboard = function() {
 
   // WADAH PENYIMPANAN SEMENTARA
   const standaloneButtons = [];
-  const folders = {};
+  const folderMap = new Map(); // Menggunakan Map agar lebih kuat membaca Key
 
-  // 1. PROSES PEMILAHAN DATA (Sangat Ketat)
+  // 1. TAHAP PEMILAHAN: PISAHKAN TOMBOL VS FOLDER
   user.menus.forEach(m => {
-    // Bersihkan spasi dan jadikan huruf besar semua untuk dicocokkan
-    const parentName = (m.parent || "").toString().trim();
+    // Paksa semua spasi hilang dan jadi huruf besar agar tidak ada salah eja dari sheet
+    const parentKey = (m.parent || "").toString().trim().toUpperCase();
     const pageId = (m.pageId || "").toString().trim();
     const menuName = (m.name || "").toString().trim();
-
-    if (parentName === "") {
+    
+    // Jika tidak ada parent
+    if (parentKey === "") {
       if (pageId !== "") {
-        // JIKA: Parent kosong & Page ID ADA = TOMBOL BERANDA / PERSONAL
+        // Ini adalah tombol mandiri (Beranda, Personal)
         standaloneButtons.push(m);
       } else {
-        // JIKA: Parent kosong & Page ID KOSONG = KEPALA FOLDER (Form Kerja, Report)
-        // Kita buatkan rumah foldernya
+        // Ini adalah KEPALA FOLDER (Form Kerja, Report)
         const folderKey = menuName.toUpperCase();
-        if (!folders[folderKey]) folders[folderKey] = { title: menuName, icon: m.icon, children: [] };
+        if (!folderMap.has(folderKey)) {
+          folderMap.set(folderKey, { title: menuName, icon: m.icon, children: [] });
+        }
       }
     } else {
-      // JIKA: Parent ADA isinya = ANAK BUAH (CC Transaksi, Penurunan)
-      const folderKey = parentName.toUpperCase();
-      // Pastikan rumah foldernya ada, kalau belum ada, buatkan darurat
-      if (!folders[folderKey]) folders[folderKey] = { title: parentName, icon: '📁', children: [] };
-      
-      folders[folderKey].children.push(m);
+      // Jika ADA parent, berarti ini ANAK FOLDER (CC Transaksi, Penurunan, dll)
+      // Cek apakah Bapaknya (Foldernya) sudah dibuat? Kalau belum, buatkan paksa.
+      if (!folderMap.has(parentKey)) {
+        folderMap.set(parentKey, { title: m.parent.trim(), icon: '📁', children: [] });
+      }
+      // Masukkan anak ini ke dalam folder bapaknya
+      folderMap.get(parentKey).children.push(m);
     }
   });
 
-  // 2. RENDER TOMBOL BERANDA / PERSONAL (Di atas folder)
+  // 2. RENDER TOMBOL MANDIRI (Beranda, Personal)
   standaloneButtons.forEach(m => {
     const btn = document.createElement('button');
     btn.className = "w-full flex items-center gap-4 px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] hover:bg-zinc-900 hover:text-white transition-all border-b border-zinc-900 text-left group";
@@ -145,31 +147,33 @@ window.initializeDashboard = function() {
     nav.appendChild(btn);
   });
 
-  // 3. RENDER FOLDER ACCORDION (Form Kerja, Report, dll)
+  // 3. RENDER FOLDER ACCORDION
   let fIndex = 0;
-  Object.keys(folders).forEach(key => {
-    const folderData = folders[key];
-    if (folderData.children.length === 0) return; // Abaikan folder jika tidak ada isinya
+  folderMap.forEach((folderData, key) => {
+    // Abaikan jika folder kosong (misal: Kepala folder ada di sheet, tapi belum ada anak menu-nya yg sesuai role)
+    if (folderData.children.length === 0) return;
 
-    const gId = 'folder-' + fIndex++;
+    const gId = 'folder-acc-' + fIndex++;
     const div = document.createElement('div');
     div.className = "border-b border-zinc-900";
     
-    // HTML Untuk Folder (Bisa diklik Buka Tutup)
+    // HTML Tombol Pembuka Folder
     div.innerHTML = `
       <button onclick="document.getElementById('${gId}').classList.toggle('hidden'); this.querySelector('.arrow-icon').classList.toggle('rotate-180')" 
-        class="w-full px-8 py-4 flex items-center justify-between bg-zinc-900/30 hover:bg-zinc-900 transition-all group outline-none">
+        class="w-full px-8 py-4 flex items-center justify-between bg-zinc-900/40 hover:bg-zinc-900 transition-all group outline-none">
         <div class="flex items-center gap-4">
-          <span class="text-xs grayscale">${folderData.icon || '📁'}</span>
+          <span class="text-xs grayscale opacity-80">${folderData.icon || '📁'}</span>
           <span class="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em] group-hover:text-zinc-300">${folderData.title}</span>
         </div>
         <svg class="arrow-icon w-3 h-3 text-zinc-600 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-width="3"/></svg>
       </button>
-      <div id="${gId}" class="hidden flex-col bg-black/40 shadow-inner">
+      
+      <!-- Wadah Anak Menu (Disembunyikan secara default) -->
+      <div id="${gId}" class="hidden flex-col bg-black/50 shadow-inner py-2">
         ${folderData.children.map(child => `
           <button onclick="window.navigateTo('${child.pageId}'); if(window.innerWidth < 768) window.toggleMobileSidebar(true);" 
             class="w-full flex items-center gap-4 px-12 py-3.5 text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] hover:text-white hover:bg-zinc-900 border-l-2 border-transparent hover:border-amber-500 transition-all text-left group">
-            <span class="text-xs grayscale opacity-40 group-hover:opacity-100 group-hover:grayscale-0 transition-all">${child.icon || '○'}</span>
+            <span class="text-xs grayscale opacity-30 group-hover:opacity-100 group-hover:grayscale-0 transition-all">${child.icon || '○'}</span>
             <span class="truncate">${child.name}</span>
           </button>
         `).join('')}
@@ -178,7 +182,6 @@ window.initializeDashboard = function() {
     nav.appendChild(div);
   });
 };
-
 
 /* 4. AUTHENTICATION HANDLERS */
 window.handleLogin = async function(e) {
