@@ -96,7 +96,23 @@ window.navigateTo = async function(pageId) {
 window.initializeDashboard = function() {
   const user = window.userData;
   const nav = document.getElementById('exec-sidebar-nav');
-  if (!user || !user.username || !nav) return window.navigateTo('Login');
+   if (!window.userData || !window.userData.username) {
+    const savedData = sessionStorage.getItem("userData");
+    if (savedData) window.userData = JSON.parse(savedData);
+  }
+
+  const user = window.userData;
+  const nav = document.getElementById('exec-sidebar-nav');
+  
+  // KUNCI 2: Jika Sidebar belum sempat muncul di layar, TUNGGU. Jangan usir ke Login.
+  if (!nav) {
+    console.log("Menunggu Sidebar Render...");
+    setTimeout(window.initializeDashboard, 200);
+    return;
+  }
+
+  // Jika memang benar-benar tidak ada data user sama sekali, baru usir ke Login
+  if (!user || !user.username) return window.navigateTo('Login');
 
   if(document.getElementById('exec-name')) document.getElementById('exec-name').innerText = user.nama;
   if(document.getElementById('exec-role')) document.getElementById('exec-role').innerText = user.role;
@@ -174,10 +190,14 @@ window.handleLogin = async function(e) {
     const res = await window.smartFetch({ action: "checkLogin", username: e.target.username.value, password: e.target.password.value });
     if (res.status === "success") {
       localStorage.setItem("activeUser", res.username);
+      
+      // KUNCI: Simpan data ke Session Storage agar tidak hilang saat pindah halaman
+      sessionStorage.setItem("userData", JSON.stringify(res));
       window.userData = res;
+      
       window.navigateTo('Dashboard_Layout');
     } else {
-      Swal.fire('Login Ditolak', res.message, 'warning'); // Akan memunculkan "Akun sedang digunakan"
+      Swal.fire('Login Ditolak', res.message, 'warning');
       if(btn) btn.disabled = false;
     }
   } catch(e) { Swal.fire('Error', 'Server Error', 'error'); if(btn) btn.disabled = false; }
