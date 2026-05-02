@@ -7,47 +7,6 @@ const UI_THEME = {
   focusRing: "focus:ring-0 focus:border-zinc-950",
   buttonStyle: "bg-zinc-950 hover:bg-zinc-800 text-white"
 };
-
-  
-/* 2.4.2 - Security-Aware Login Handler */
-window.handleLogin = async function(e) {
-  e.preventDefault();
-  const btn = document.getElementById('login-btn');
-  const formData = new FormData(e.target);
-  const { username, password } = Object.fromEntries(formData.entries());
-
-  btn.disabled = true;
-  btn.innerHTML = `<span class="animate-pulse italic">SECURE_CONNECTING...</span>`;
-
-  try {
-    const res = await window.smartFetch({
-      action: "checkLogin",
-      username: username,
-      password: password
-    });
-
-    if (res.status === "success") {
-      // Simpan Token Sesi untuk Validasi Anti-Multi Device
-      localStorage.setItem("activeUser", res.username);
-      localStorage.setItem("sessionID", res.sessionID);
-      window.userData = res;
-      
-      window.navigateTo('Dashboard_Layout');
-    } else {
-      throw new Error(res.message);
-    }
-  } catch (err) {
-    Swal.fire({ 
-      icon: 'error', 
-      title: 'SECURITY_ALERT', 
-      text: err.message,
-      confirmButtonColor: '#000',
-      customClass: { popup: 'rounded-none' }
-    });
-    btn.disabled = false;
-    btn.innerHTML = `AUTHORIZE ACCESS →`;
-  }
-};
   
 </script>
 
